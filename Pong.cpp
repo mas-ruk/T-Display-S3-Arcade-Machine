@@ -16,7 +16,6 @@ unsigned long p1LastUpTime = 0;
 unsigned long p1LastDownTime = 0;
 unsigned long p2LastUpTime = 0;
 unsigned long p2LastDownTime = 0;
-const int debounceDelay = 50; // 50 ms 
 
 // =============================================================================================================
 
@@ -83,32 +82,36 @@ void pongUpdate() {
 // =============================================================================================================
 
 void pongLoop() {
+  static unsigned long lastUpdateTime = 0;
   unsigned long currentTime = millis();
+  unsigned long elapsedTime = currentTime - lastUpdateTime;
 
-    // Read inputs for paddles
-    if (digitalRead(player1Up) == HIGH && currentTime - p1LastUpTime > debounceDelay && player1.y > 0) {
-        player1.y += 5;
-        p1LastUpTime = currentTime; // update debounce
-    }
-    if (digitalRead(player1Down) == HIGH && currentTime - p1LastDownTime > debounceDelay && player1.y < SCREEN_HEIGHT - PADDLE_HEIGHT) {
-        player1.y -= 5;
-        p1LastDownTime = currentTime;
-    }
-    if (digitalRead(player2Up) == HIGH && currentTime - p2LastUpTime > debounceDelay && player2.y > 0) {
-        player2.y += 5;
-        p2LastUpTime = currentTime;
-    }
-    if (digitalRead(player2Down) == HIGH && currentTime - p2LastDownTime > debounceDelay && player2.y < SCREEN_HEIGHT - PADDLE_HEIGHT) {
-        player2.y -= 5;
-        p2LastDownTime = currentTime;
-    }
+  // Read inputs for paddles
+  if (digitalRead(player1Down) == HIGH) {
+      if (player1.y > 0) {  // Check upper bound
+          player1.y -= 5;   // Move up
+      }
+  }
+  if (digitalRead(player1Up) == HIGH) {
+      if (player1.y < SCREEN_HEIGHT - PADDLE_HEIGHT) { // Check lower bound
+          player1.y += 5;   // Move down
+      }
+  }
+  if (digitalRead(player2Down) == HIGH) {
+      if (player2.y > 0) {  // Check upper bound
+          player2.y -= 5;   // Move up
+      }
+  }
+  if (digitalRead(player2Up) == HIGH) {
+      if (player2.y < SCREEN_HEIGHT - PADDLE_HEIGHT) { // Check lower bound
+          player2.y += 5;   // Move down
+      }
+  }
 
-    pongUpdate();
-    
-    tft.fillScreen(TFT_BLACK);
-    pongDraw();
-
-    delay(20);
+  pongUpdate();
+  tft.fillScreen(TFT_BLACK);
+  pongDraw();
+  delay(20);
 }
 
 // =============================================================================================================
