@@ -1,5 +1,6 @@
 #include <TFT_eSPI.h>
 #include "Tetris.h"
+#include "Pong.h"
 
 // init tft Object
 TFT_eSPI tft = TFT_eSPI();
@@ -10,11 +11,11 @@ int rightButton = 44;
 int upButton = 18;
 int downButton = 17;
 
-int aButton = 1;
+int aButton = 21;
 int bButton = 16;
 
 // menu vars
-String games[] = {"Tetris", "Game 2", "Game 3"};
+String games[] = {"Tetris", "Pong", "Game 3"};
 int currSelect = 0;
 int totalGames = sizeof(games) / sizeof(games[0]);
 
@@ -42,6 +43,18 @@ void launchTetris() {
   while(true) {
     tetrisLoop();
   }
+}
+
+void launchPong() {
+  tft.fillScreen(TFT_BLACK);
+  pongSetup();
+  while(true) {
+    pongLoop();
+  }
+}
+
+void launchGame3() {
+  
 }
 
 // =============================================================================================================
@@ -92,6 +105,10 @@ void loop() {
   if (currAState == LOW && preAState == HIGH) {
     if (currSelect == 0) {
       launchTetris();
+    } else if (currSelect == 1){
+      launchPong();
+    } else if (currSelect == 2){
+      launchGame3();
     }
     // add more games here
   }
