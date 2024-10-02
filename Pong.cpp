@@ -111,6 +111,9 @@ void gameOver() {
 // =============================================================================================================
 
 void pongSetup() {
+    player1Score = 0;
+    player2Score = 0;
+
     player1.x = 10;
     player1.y = SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2;
 
@@ -151,6 +154,15 @@ void pongDraw() {
 
 // =============================================================================================================
 
+void resetBall() {
+  ball.x = SCREEN_WIDTH / 2;
+  ball.y = SCREEN_HEIGHT / 2;
+  ball.dx = 4; // Ball speed in x direction
+  ball.dy = 4; // Ball speed in y direction
+}
+
+// =============================================================================================================
+
 void pongUpdate() {
     if (!paused) {
         // Update ball position
@@ -171,10 +183,10 @@ void pongUpdate() {
       // Ball out of bounds
       if (ball.x < 0) {
           player2Score++;
-          pongSetup(); // Reset
+          resetBall(); // Reset
       } else if (ball.x > SCREEN_WIDTH - BALL_SIZE) {
           player1Score++;
-          pongSetup(); // Reset
+          resetBall(); // Reset
     }
   }
 }
