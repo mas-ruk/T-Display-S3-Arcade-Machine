@@ -19,6 +19,29 @@ unsigned long p2LastDownTime = 0;
 
 // =============================================================================================================
 
+void gameOver() {
+  int scrWidth = tft.width();
+  int scrHeight = tft.height();
+
+  String gameOver = "GAME OVER";
+  String winnerText = (player1Score == 10) ? "Player 1 Wins!!!" : "Player 2 Wins!!!";
+
+  if (player1Score == 10 || player2Score == 10) {
+    tft.fillScreen(TFT_BLACK);
+
+    // calc centered pos of text
+    int gameOverX = (scrWidth - tft.textWidth(gameOver)) / 2;
+    int winTextX = (scrWidth - tft.textWidth(winnerText)) / 2;
+
+    // game over text
+    tft.drawString(gameOver, gameOverX, scrHeight / 2);
+
+    // winners text 10 pixels below
+    tft.drawString(winnerText, winTextX, (scrHeight / 2) + 20);
+  }
+}
+// =============================================================================================================
+
 void pongSetup() {
     player1.x = 10;
     player1.y = SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2;
@@ -93,6 +116,12 @@ void pongLoop() {
   static unsigned long lastUpdateTime = 0;
   unsigned long currentTime = millis();
   unsigned long elapsedTime = currentTime - lastUpdateTime;
+
+  // game over check
+  if (player1Score == 10 || player2Score == 10) {
+    gameOver();
+    return; // stops loop
+  }
 
   // Read inputs for paddles
   if (digitalRead(player1Down) == HIGH) {
