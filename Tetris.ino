@@ -56,12 +56,16 @@ void tetrisSetup(void) {
   delay(3000);
   tft.fillScreen(TFT_BLACK);  
   tft.drawLine(11,19,122,19,GREY);
-
   tft.drawLine(11,19,11,240,GREY);
   tft.drawLine(122,19,122,240,GREY);
+
+  // Clear area for the score and level display
+  tft.fillRect(14, 8, 50, 10, TFT_BLACK);
+  tft.fillRect(88, 8, 50, 10, TFT_BLACK);
   
   tft.drawString("SCORE:"+String(score),14,8,1);
   tft.drawString("LVL:"+String(lvl),88,8,1);
+
   //----------------------------// Make Block ----------------------------
   make_block( 0, TFT_BLACK);        // Type No, Color
   make_block( 1, 0x00F0);       // DDDD     RED
@@ -216,13 +220,13 @@ void DeleteLine() {
         {
         lvl++;
         game_speed=game_speed-4;
+        tft.fillRect(88, 8, 50, 10, TFT_BLACK); 
         tft.drawString("LVL:"+String(lvl),88,8,1);
         }
-       tft.drawString("SCORE:"+String(score),14,8,1);
+      tft.fillRect(14, 8, 50, 10, TFT_BLACK);
+      tft.drawString("SCORE:"+String(score),14,8,1);
           for (int k = j; k >= 1; --k) 
               {
-      
-    
     for (int i = 0; i < Width; ++i)
     {
       screen[i][k] = screen[i][k - 1];
