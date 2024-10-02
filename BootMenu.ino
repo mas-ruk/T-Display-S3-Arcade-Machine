@@ -13,6 +13,10 @@ int downButton = 17;
 
 int aButton = 21;
 int bButton = 16;
+int pauseButton = 1;
+
+// pause
+bool paused = false;
 
 // menu vars
 String games[] = {"Tetris", "Pong", "Game 3"};
@@ -54,7 +58,13 @@ void launchPong() {
 }
 
 void launchGame3() {
-  
+}
+
+// =============================================================================================================
+
+// will return true if pause button pressed
+bool isPauseButtonPressed() {
+  return digitalRead(pauseButton) == LOW;
 }
 
 // =============================================================================================================
@@ -73,6 +83,7 @@ void setup() {
   pinMode(upButton, INPUT_PULLUP);
   pinMode(downButton, INPUT_PULLUP);
   pinMode(aButton, INPUT_PULLUP);
+  pinMode(pauseButton, INPUT_PULLUP);
 
   drawMenu();
 }
