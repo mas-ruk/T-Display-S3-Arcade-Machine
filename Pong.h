@@ -15,8 +15,8 @@ const int BALL_SIZE = 8;
 // Define button pins
 const int player1Up = 18; // same as bootmenu
 const int player1Down = 17; // same as bootmenu
-const int player2Up = 3;
-const int player2Down = 4;
+const int player2Up = 2;
+const int player2Down = 3;
 extern int aButton;
 extern int pauseButton;
 

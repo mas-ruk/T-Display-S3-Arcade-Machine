@@ -111,6 +111,9 @@ void gameOver() {
 // =============================================================================================================
 
 void pongSetup() {
+    pinMode(player2Up, INPUT_PULLUP);
+    pinMode(player2Down, INPUT_PULLUP);
+    
     player1Score = 0;
     player2Score = 0;
 
@@ -175,9 +178,24 @@ void pongUpdate() {
       }
 
       // Ball collision with paddles
-      if ((ball.x <= player1.x + PADDLE_WIDTH && ball.y + BALL_SIZE >= player1.y && ball.y <= player1.y + PADDLE_HEIGHT) ||
-          (ball.x + BALL_SIZE >= player2.x && ball.y + BALL_SIZE >= player2.y && ball.y <= player2.y + PADDLE_HEIGHT)) {
-          ball.dx *= -1;
+      if (ball.dx < 0) {  // Ball moving left
+          if (ball.x <= player1.x + PADDLE_WIDTH && ball.y + BALL_SIZE >= player1.y && ball.y <= player1.y + PADDLE_HEIGHT) {
+              ball.dx *= -1;
+              ball.x = player1.x + PADDLE_WIDTH; // Ensure ball is outside the paddle after bounce
+          } else if (ball.x < 0) {  // If ball gets behind player1
+              player2Score++;
+              resetBall(); // Reset after scoring
+              return;
+          }
+      } else if (ball.dx > 0) {  // Ball moving right
+          if (ball.x + BALL_SIZE >= player2.x && ball.y + BALL_SIZE >= player2.y && ball.y <= player2.y + PADDLE_HEIGHT) {
+              ball.dx *= -1;
+              ball.x = player2.x - BALL_SIZE; // Ensure ball is outside the paddle after bounce
+          } else if (ball.x > SCREEN_WIDTH - BALL_SIZE) {  // If ball gets behind player2
+              player1Score++;
+              resetBall(); // Reset after scoring
+              return;
+          }
       }
 
       // Ball out of bounds
