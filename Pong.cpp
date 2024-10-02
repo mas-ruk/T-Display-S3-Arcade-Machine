@@ -59,11 +59,11 @@ void drawPauseMenu() {
 
 void handlePauseMenu() {
   // using up down buttons to navigate pause menu
-  if (digitalRead(player1Up) == HIGH || digitalRead(player2Up) == HIGH) {
+  if (digitalRead(player1Up) == HIGH) {
     selectedOption = (selectedOption + 1) % 3;
     delay(100); // debounce
   }
-  if (digitalRead(player1Down) == HIGH || digitalRead(player2Down) == HIGH) {
+  if (digitalRead(player1Down) == HIGH) {
     selectedOption = (selectedOption - 1 + 3) % 3;
     delay(100); // debounce
   }
