@@ -35,7 +35,7 @@ class MyServerCallbacks : public BLEServerCallbacks {
 // Initialize BLE
 void setupBLE() {
   Serial.println("Initializing BLE...");
-  BLEDevice::init("GameController");
+  BLEDevice::init("GameController_P1");
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
   
