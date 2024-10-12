@@ -48,7 +48,7 @@ int lvl=1;
 
 void tetrisSetup(void) {
   tft.init();
-  tft.setRotation(2);
+  tft.setRotation(4);//changed
   tft.setTextSize(1); // boot menu text size too large
   tft.setSwapBytes(true);
 

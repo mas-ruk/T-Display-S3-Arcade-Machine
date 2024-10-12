@@ -13,10 +13,10 @@ const int PADDLE_HEIGHT = 60;
 const int BALL_SIZE = 8;
 
 // Define button pins
-const int player1Up = 18; // same as bootmenu
-const int player1Down = 17; // same as bootmenu
-const int player2Up = 2;
-const int player2Down = 3;
+const int player1Up = 16; // same as bootmenu
+const int player1Down = 12; // same as bootmenu
+const int player2Up = 1;
+const int player2Down = 10;
 extern int aButton;
 extern int pauseButton;
 

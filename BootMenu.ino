@@ -6,14 +6,21 @@
 TFT_eSPI tft = TFT_eSPI();
 
 // input pins
-int leftButton = 43;
-int rightButton = 44;
-int upButton = 18;
-int downButton = 17;
+int leftButton = 13;
+int rightButton = 11;
+int upButton = 16;
+int downButton = 12;
 
-int aButton = 21;
-int bButton = 16;
-int pauseButton = 1;
+int xButton = 1;
+int yButton = 3;
+
+int aButton = 2;
+int bButton = 10;
+
+int mButton = 44;
+int pButton = 43;
+
+int pauseButton = 21;
 
 // pause
 bool paused = false;
@@ -70,6 +77,8 @@ bool isPauseButtonPressed() {
 // =============================================================================================================
 
 void setup() {
+  pinMode(15, OUTPUT);
+   digitalWrite(15, HIGH);
   Serial.begin(115200);
   tft.init();
   tft.fillScreen(TFT_BLACK);
