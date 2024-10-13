@@ -19,6 +19,7 @@ Point pos; Block block;
 int rot, fall_cnt = 0;
 bool started = false, gameover = false;
 boolean but_A = false, but_LEFT = false, but_RIGHT = false;
+boolean but_DOWN = false, but_UP = false;
 int game_speed = 20; // 25msec
 Block blocks[7] = {
   {{{{-1,0},{0,0},{1,0},{2,0}},{{0,-1},{0,0},{0,1},{0,2}},
@@ -42,6 +43,7 @@ int pom=0;
 int pom2=0;
 int pom3=0;
 int pom4=0;
+int pom5=0; // For upButton
 
 int score=0;
 int lvl=1;
@@ -51,9 +53,6 @@ void tetrisSetup(void) {
   tft.setRotation(4);//changed
   tft.setTextSize(1); // boot menu text size too large
   tft.setSwapBytes(true);
-
-  tft.pushImage(0, 0, 135, 240,tet);
-  delay(3000);
   tft.fillScreen(TFT_BLACK);  
   tft.drawLine(11,19,122,19,GREY);
   tft.drawLine(11,19,11,240,GREY);
@@ -69,14 +68,13 @@ void tetrisSetup(void) {
   //----------------------------// Make Block ----------------------------
   make_block( 0, TFT_BLACK);        // Type No, Color
   make_block( 1, 0x00F0);       // DDDD     RED
-  make_block( 2, 0xFBE4);       // DD,DD    PUPLE 
+  make_block( 2, 0xFBE4);       // DD,DD    PURPLE 
   make_block( 3, 0xFF00);       // D__,DDD  BLUE
   make_block( 4, 0xFF87);       // DD_,_DD  GREEN 
-  make_block( 5, 0x87FF);       // __D,DDD  YELLO
+  make_block( 5, 0x87FF);       // __D,DDD  YELLOW
   make_block( 6, 0xF00F);       // _DD,DD_  LIGHT GREEN
   make_block( 7, 0xF8FC);       // _D_,DDD  PINK
   //----------------------------------------------------------------------
-
 
   PutStartPos();                             // Start Position
   for (int i = 0; i < 4; ++i) screen[pos.X + 
@@ -105,13 +103,13 @@ void tetrisLoop() {
       return;
     }
 
-    if(gameover==false){
-  Point next_pos;
-  int next_rot = rot;
-  GetNextPosRot(&next_pos, &next_rot);
-  ReviseScreen(next_pos, next_rot);
-  //M5.update();
-  delay(game_speed);    }                                  // SPEED ADJUST
+  if(gameover==false){
+    Point next_pos;
+    int next_rot = rot;
+    GetNextPosRot(&next_pos, &next_rot);
+    ReviseScreen(next_pos, next_rot);
+    delay(game_speed);    // SPEED ADJUST
+  }
 }
 //========================================================================
 void Draw() {                               // Draw 120x240 in the center
@@ -148,63 +146,92 @@ void GameOver() {
  
 }
 //========================================================================
-void ClearKeys() { but_A=false; but_LEFT=false; but_RIGHT=false;}
+void ClearKeys() { but_A=false; but_LEFT=false; but_RIGHT=false; but_UP=false; but_DOWN=false; }
 //========================================================================
 
-bool KeyPadLoop() {
+void KeyPadLoop() {
+  // Read left button
   if (digitalRead(leftButton) == 0 && digitalRead(rightButton) == 1) {
     if (pom == 0) {
       pom = 1;
       ClearKeys();
       but_LEFT = true;
-      return true;
     }
   } else { pom = 0; }
 
+  // Read right button
   if (digitalRead(rightButton) == 0 && digitalRead(leftButton) == 1) {
     if (pom2 == 0) {
       pom2 = 1;
       ClearKeys();
       but_RIGHT = true;
-      return true;
     }
   } else { pom2 = 0; }
 
-  if (digitalRead(37) == 0) {
-    if (pom3 == 0) {
-      pom3 = 1;
-      ClearKeys();
-      but_A = true;
-      return true;
-    }
-  } else { pom3 = 0; }
-
-  if (digitalRead(aButton) == 0) {  // New upwards button logic for rotation
+  // Rotate button (assuming it's connected to aButton)
+  if (digitalRead(aButton) == 0) {
     if (pom4 == 0) {
       pom4 = 1;
       ClearKeys();
-      but_A = true;  // Rotate the block
-      return true;
+      but_A = true;
     }
   } else { pom4 = 0; }
 
-  return false;
+  // Down button (held)
+  if (digitalRead(downButton) == 0) {
+    but_DOWN = true;
+  } else {
+    but_DOWN = false;
+  }
+
+  // Up button (press detection)
+  if (digitalRead(upButton) == 0) {
+    if (pom5 == 0) {
+      pom5 = 1;
+      ClearKeys();
+      but_UP = true;
+    }
+  } else { pom5 = 0; }
 }
 
 //========================================================================
 void GetNextPosRot(Point* pnext_pos, int* pnext_rot) {
-  bool received = KeyPadLoop();
+  KeyPadLoop();
 
   if (but_LEFT) started = true;
   if (!started) return;
+
   pnext_pos->X = pos.X;
   pnext_pos->Y = pos.Y;
-  if ((fall_cnt = (fall_cnt + 1) % 10) == 0) pnext_pos->Y += 1;
-  else if (1) {
-    if (but_LEFT) { but_LEFT = false; pnext_pos->X -= 1;}
-    else if (but_RIGHT) { but_RIGHT = false; pnext_pos->X += 1;}
-    else if (but_A) { but_A = false;
-      *pnext_rot = (*pnext_rot + block.numRotate - 1)%block.numRotate; 
+
+  int fall_interval = 10;  // Default fall speed
+
+  if (but_DOWN) {
+    fall_interval = 1;  // Increase drop speed when down button is pressed
+  }
+
+  if ((fall_cnt = (fall_cnt + 1) % fall_interval) == 0) {
+    pnext_pos->Y += 1;
+  }
+
+  if (but_LEFT) { but_LEFT = false; pnext_pos->X -= 1;}
+  else if (but_RIGHT) { but_RIGHT = false; pnext_pos->X += 1;}
+  else if (but_A) { but_A = false;
+    *pnext_rot = (*pnext_rot + block.numRotate - 1)%block.numRotate; 
+  }
+  else if (but_UP) {
+    but_UP = false;
+    // Instant drop
+    while (true) {
+      Point temp_pos = *pnext_pos;
+      temp_pos.Y += 1;
+      Point temp_squares[4];
+      if (GetSquares(block, temp_pos, *pnext_rot, temp_squares)) {
+        pnext_pos->Y += 1;
+      } else {
+        // Can't move further down
+        break;
+      }
     }
   }
 }
@@ -237,25 +264,33 @@ void DeleteLine() {
 void ReviseScreen(Point next_pos, int next_rot) {
   if (!started) return;
   Point next_squares[4];
-  for (int i = 0; i < 4; ++i) screen[pos.X + 
-    block.square[rot][i].X][pos.Y + block.square[rot][i].Y] = 0;
+  // Remove the block from the screen
+  for (int i = 0; i < 4; ++i) screen[pos.X + block.square[rot][i].X][pos.Y + block.square[rot][i].Y] = 0;
+
   if (GetSquares(block, next_pos, next_rot, next_squares)) {
-   for (int i = 0; i < 4; ++i){
-     screen[next_squares[i].X][next_squares[i].Y] = block.color;
-   }
-   pos = next_pos; rot = next_rot;
-  }
-  else {
-   for (int i = 0; i < 4; ++i) screen[pos.X + 
-    block.square[rot][i].X][pos.Y + block.square[rot][i].Y] = block.color;
-   if (next_pos.Y == pos.Y + 1) {
-    DeleteLine(); PutStartPos();
-    if (!GetSquares(block, pos, rot, next_squares)) {
-     for (int i = 0; i < 4; ++i) screen[pos.X + 
-      block.square[rot][i].X][pos.Y + block.square[rot][i].Y] = block.color;
-      GameOver();
+    // Move the block to the new position
+    for (int i = 0; i < 4; ++i){
+      screen[next_squares[i].X][next_squares[i].Y] = block.color;
     }
-   }
+    pos = next_pos;
+    rot = next_rot;
+  } else {
+    // Can't move the block to next_pos, so put it back to current position
+    for (int i = 0; i < 4; ++i)
+      screen[pos.X + block.square[rot][i].X][pos.Y + block.square[rot][i].Y] = block.color;
+
+    // If the attempted move was down, and we can't move further down
+    if (next_pos.Y != pos.Y || but_UP) {
+      DeleteLine(); PutStartPos();
+
+      // Check for game over condition
+      Point temp_squares[4];
+      if (!GetSquares(block, pos, rot, temp_squares)) {
+        for (int i = 0; i < 4; ++i)
+          screen[pos.X + block.square[rot][i].X][pos.Y + block.square[rot][i].Y] = block.color;
+        GameOver();
+      }
+    }
   }
   Draw();
 }
