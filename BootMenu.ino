@@ -1,6 +1,7 @@
 #include <TFT_eSPI.h>
 #include "Tetris.h"
 #include "Pong.h"
+#include "Snake.h"
 
 // init tft Object
 TFT_eSPI tft = TFT_eSPI();
@@ -26,7 +27,7 @@ int pauseButton = 21;
 bool paused = false;
 
 // menu vars
-String games[] = {"Tetris", "Pong", "Game 3"};
+String games[] = {"Tetris", "Pong", "Snake"};
 int currSelect = 0;
 int totalGames = sizeof(games) / sizeof(games[0]);
 
@@ -64,7 +65,12 @@ void launchPong() {
   }
 }
 
-void launchGame3() {
+void launchSnake() {
+  tft.fillScreen(TFT_BLACK);
+  snakeSetup();
+  while (true) {
+    snakeLoop();
+  }
 }
 
 // =============================================================================================================
@@ -92,7 +98,11 @@ void setup() {
   pinMode(upButton, INPUT_PULLUP);
   pinMode(downButton, INPUT_PULLUP);
   pinMode(aButton, INPUT_PULLUP);
+  pinMode(bButton, INPUT_PULLUP);
   pinMode(pauseButton, INPUT_PULLUP);
+
+  // random seed for food generation in snake
+  randomSeed(analogRead(0));
 
   drawMenu();
 }
@@ -128,9 +138,8 @@ void loop() {
     } else if (currSelect == 1){
       launchPong();
     } else if (currSelect == 2){
-      launchGame3();
+      launchSnake();
     }
-    // add more games here
   }
 
   // update states 

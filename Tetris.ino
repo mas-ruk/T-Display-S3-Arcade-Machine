@@ -179,7 +179,7 @@ bool KeyPadLoop() {
     }
   } else { pom3 = 0; }
 
-  if (digitalRead(upButton) == 0) {  // New upwards button logic for rotation
+  if (digitalRead(aButton) == 0) {  // New upwards button logic for rotation
     if (pom4 == 0) {
       pom4 = 1;
       ClearKeys();
