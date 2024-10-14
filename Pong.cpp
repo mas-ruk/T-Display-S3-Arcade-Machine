@@ -111,6 +111,7 @@ void gameOver() {
 // =============================================================================================================
 
 void pongSetup() {
+    tft.setRotation(1); // sideways
     pinMode(player2Up, INPUT_PULLUP);
     pinMode(player2Down, INPUT_PULLUP);
     
