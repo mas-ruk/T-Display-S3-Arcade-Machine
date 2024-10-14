@@ -35,11 +35,13 @@ class MyServerCallbacks : public BLEServerCallbacks {
 // Initialize BLE
 void setupBLE() {
   Serial.println("Initializing BLE...");
-  BLEDevice::init("GameController_P1");
+  BLEDevice::init("GameController_P2");
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
   
   BLEService *pService = pServer->createService(SERVICE_UUID);
+  
+  
   pCharacteristic = pService->createCharacteristic(
                       CHARACTERISTIC_UUID,
                       BLECharacteristic::PROPERTY_NOTIFY
@@ -47,8 +49,25 @@ void setupBLE() {
 
   pCharacteristic->addDescriptor(new BLE2902());
   pService->start();
+  /*
   pServer->getAdvertising()->start();
   Serial.println("BLE Advertising Started");
+  */
+  // Get the BLEAdvertising object
+  BLEAdvertising *pAdvertising = pServer->getAdvertising();
+
+  // Add the service UUID to the advertising packet
+  /// this fucking thing wasn't being sent properly and so it died 
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+
+  // Adjust the advertisement interval
+  pAdvertising->setMinInterval(400);  // Minimum interval (in 0.625ms units, 100 * 0.625ms = 62.5ms)
+  pAdvertising->setMaxInterval(500);  // Maximum interval (in 0.625ms units, 200 * 0.625ms = 125ms)
+
+  pAdvertising->start();
+  Serial.println("BLE Advertising Started with modified intervals");
+
+
 }
 
 // Define button pins (Revised to avoid UART/SPI conflicts)
