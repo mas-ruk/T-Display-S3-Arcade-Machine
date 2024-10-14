@@ -2,6 +2,7 @@
 #include "Tetris.h"
 #include "Pong.h"
 #include "Snake.h"
+#include "Chess.h"
 
 // init tft Object
 TFT_eSPI tft = TFT_eSPI();
@@ -27,7 +28,7 @@ int pauseButton = 21;
 bool paused = false;
 
 // menu vars
-String games[] = {"Tetris", "Pong", "Snake"};
+String games[] = {"Tetris", "Pong", "Snake", "Chess"};
 int currSelect = 0;
 int totalGames = sizeof(games) / sizeof(games[0]);
 
@@ -73,6 +74,18 @@ void launchSnake() {
   }
 }
 
+void launchChess() {
+  tft.fillScreen(TFT_BLACK);
+  chessSetup();
+  while (true) {
+    if (isPauseButtonPressed()) {
+      break; // Return to menu when pause button is pressed
+    }
+    chessLoop();
+  }
+  drawMenu();
+}
+
 // =============================================================================================================
 
 // will return true if pause button pressed
@@ -88,7 +101,7 @@ void setup() {
   Serial.begin(115200);
   tft.init();
   tft.fillScreen(TFT_BLACK);
-  tft.setRotation(1); // upside down for convience, change this later
+  tft.setRotation(4); // upside down for convience, change this later
   tft.setTextSize(2);
 
   // set i/o pins
@@ -139,6 +152,8 @@ void loop() {
       launchPong();
     } else if (currSelect == 2){
       launchSnake();
+    } else if (currSelect == 3) {
+      launchChess();
     }
   }
 

@@ -3,15 +3,18 @@
 #include "Snake.h"
 #include <esp_system.h>
 
-// Screen dimensions (adjust based on your display)
-const int screenWidth = 320;   // Width of the TFT display
-const int screenHeight = 170;  // Height of the TFT display
+// Screen dimensions for portrait mode
+const int screenWidth = 170;   // Width of the TFT display in portrait
+const int screenHeight = 320;  // Height of the TFT display in portrait
 
 // Game grid dimensions
 const int gridSize = 10;  // Size of each grid square in pixels
 
+// Offset for score display
+const int yOffset = 20; // Pixels reserved at the top for the score
+
 const int gridWidth = screenWidth / gridSize;
-const int gridHeight = screenHeight / gridSize;
+const int gridHeight = (screenHeight - yOffset) / gridSize; // Adjusted for score offset
 
 // Snake variables
 int snakeX[100];  // Snake's x positions
@@ -29,6 +32,9 @@ int dirY;
 // Game state
 bool gameOver;
 
+// Score variable
+int snakeScore;
+
 // Function prototypes (private to this file)
 void readInputs();
 void moveSnake();
@@ -40,22 +46,29 @@ void placeFood();
 void snakeSetup() {
   // Initialize the game variables
   snakeLength = 3;
+  
+  // Initialize the score
+  snakeScore = 0;
+
   // Start the snake in the middle of the screen
   snakeX[0] = gridWidth / 2;
   snakeY[0] = gridHeight / 2;
 
-  // Initialize the direction (moving to the right)
-  dirX = 1;
-  dirY = 0;
+  // Initialize the direction (moving upwards)
+  dirX = 0;
+  dirY = -1;
 
   // Initialize the rest of the snake body behind the head
   for (int i = 1; i < snakeLength; i++) {
-    snakeX[i] = snakeX[0] - i;
-    snakeY[i] = snakeY[0];
+    snakeX[i] = snakeX[0];
+    snakeY[i] = snakeY[0] + i;
   }
 
   // Place the food at a random position
   placeFood();
+
+  // Set the screen rotation to portrait mode
+  tft.setRotation(4);  // Adjust this value based on your display's orientation
 
   // Clear the screen
   tft.fillScreen(TFT_BLACK);
@@ -146,6 +159,10 @@ void checkCollisions() {
     // Add new segment at the end
     snakeX[snakeLength - 1] = snakeX[snakeLength - 2];
     snakeY[snakeLength - 1] = snakeY[snakeLength - 2];
+    
+    // Increment score
+    snakeScore++;
+
     placeFood();
   }
 }
@@ -154,27 +171,49 @@ void drawGame() {
   // Clear screen
   tft.fillScreen(TFT_BLACK);
 
+  // Draw the score at the top center
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextSize(2);
+  tft.drawCentreString("Score: " + String(snakeScore), screenWidth / 2, 5, 1); // GFXFF is the font
+
   // Draw snake
   for (int i = 0; i < snakeLength; i++) {
     int x = snakeX[i] * gridSize;
-    int y = snakeY[i] * gridSize;
+    int y = snakeY[i] * gridSize + yOffset; // Apply yOffset for score space
     tft.fillRect(x, y, gridSize, gridSize, TFT_GREEN);
   }
 
   // Draw food
   int foodPosX = foodX * gridSize;
-  int foodPosY = foodY * gridSize;
+  int foodPosY = foodY * gridSize + yOffset; // Apply yOffset for score space
   tft.fillRect(foodPosX, foodPosY, gridSize, gridSize, TFT_RED);
 }
 
 void showGameOver() {
+  // Clear the screen with black color
   tft.fillScreen(TFT_BLACK);
+  
+  // Set text color to white
   tft.setTextColor(TFT_WHITE);
-  tft.setTextSize(3);
-  tft.drawString("Game Over", screenWidth / 2 - 60, screenHeight / 2 - 30);
+  
+  // Set text size for "Game Over"
   tft.setTextSize(2);
-  tft.drawString("Press A to Restart", screenWidth / 2 - 70, screenHeight / 2 + 10);
-  tft.drawString("Press B for Menu", screenWidth / 2 - 70, screenHeight / 2 + 40);
+  
+  // Draw "Game Over" at the center, slightly above the middle
+  tft.drawCentreString("Game Over", screenWidth / 2, screenHeight / 2 - 50, 1);
+  
+  // Display the final score
+  tft.setTextSize(2);
+  tft.drawCentreString("Final Score: " + String(snakeScore), screenWidth / 2, screenHeight / 2 - 20, 1);
+  
+  // Set smaller text size for instructions
+  tft.setTextSize(1);
+  
+  // Draw "Press A to Restart" below "Game Over"
+  tft.drawCentreString("Press A to Restart", screenWidth / 2, screenHeight / 2 + 10, 1);
+  
+  // Draw "Press B for Menu" further below
+  tft.drawCentreString("Press B for Menu", screenWidth / 2, screenHeight / 2 + 30, 1);
 }
 
 void placeFood() {
