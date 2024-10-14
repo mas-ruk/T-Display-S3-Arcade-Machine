@@ -88,7 +88,7 @@ void setup() {
   Serial.begin(115200);
   tft.init();
   tft.fillScreen(TFT_BLACK);
-  tft.setRotation(1); // upside down for convience, change this later
+  tft.setRotation(4); // upside down for convience, change this later
   tft.setTextSize(2);
 
   // set i/o pins

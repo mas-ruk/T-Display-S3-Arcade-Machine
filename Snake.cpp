@@ -3,9 +3,9 @@
 #include "Snake.h"
 #include <esp_system.h>
 
-// Screen dimensions (adjust based on your display)
-const int screenWidth = 320;   // Width of the TFT display
-const int screenHeight = 170;  // Height of the TFT display
+// Screen dimensions for portrait mode
+const int screenWidth = 170;   // Width of the TFT display in portrait
+const int screenHeight = 320;  // Height of the TFT display in portrait
 
 // Game grid dimensions
 const int gridSize = 10;  // Size of each grid square in pixels
@@ -44,18 +44,21 @@ void snakeSetup() {
   snakeX[0] = gridWidth / 2;
   snakeY[0] = gridHeight / 2;
 
-  // Initialize the direction (moving to the right)
-  dirX = 1;
-  dirY = 0;
+  // Initialize the direction (moving upwards)
+  dirX = 0;
+  dirY = -1;
 
   // Initialize the rest of the snake body behind the head
   for (int i = 1; i < snakeLength; i++) {
-    snakeX[i] = snakeX[0] - i;
-    snakeY[i] = snakeY[0];
+    snakeX[i] = snakeX[0];
+    snakeY[i] = snakeY[0] + i;
   }
 
   // Place the food at a random position
   placeFood();
+
+  // Set the screen rotation to portrait mode
+  tft.setRotation(4);  // Adjust this value based on your display's orientation
 
   // Clear the screen
   tft.fillScreen(TFT_BLACK);
@@ -168,13 +171,29 @@ void drawGame() {
 }
 
 void showGameOver() {
+  // Clear the screen with black color
   tft.fillScreen(TFT_BLACK);
+  
+  // Set text color to white
   tft.setTextColor(TFT_WHITE);
-  tft.setTextSize(3);
-  tft.drawString("Game Over", screenWidth / 2 - 60, screenHeight / 2 - 30);
+  
+  // Set text datum to Middle Center for centered alignment
+  tft.setTextDatum(MC_DATUM); // MC_DATUM = Middle Center
+  
+  // Set larger text size for "Game Over"
   tft.setTextSize(2);
-  tft.drawString("Press A to Restart", screenWidth / 2 - 70, screenHeight / 2 + 10);
-  tft.drawString("Press B for Menu", screenWidth / 2 - 70, screenHeight / 2 + 40);
+  
+  // Draw "Game Over" at the center, slightly above the middle
+  tft.drawString("Game Over", screenWidth / 2, screenHeight / 2 - 30);
+  
+  // Set smaller text size for instructions
+  tft.setTextSize(1);
+  
+  // Draw "Press A to Restart" below "Game Over"
+  tft.drawString("Press A to Restart", screenWidth / 2, screenHeight / 2 + 10);
+  
+  // Draw "Press B for Menu" further below
+  tft.drawString("Press B for Menu", screenWidth / 2, screenHeight / 2 + 40);
 }
 
 void placeFood() {
