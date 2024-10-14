@@ -3,7 +3,7 @@
 
 #include <SPI.h>
 #include <TFT_eSPI.h>
-
+#include "Buttons.h"
 // Function declarations
 void setup();
 void loop();
@@ -18,12 +18,6 @@ struct Block {Point square[4][4]; int numRotate, color;};
 
 // External declarations for global variables
 extern TFT_eSPI tft; // Declare TFT object
-extern int leftButton; // Declare button variables
-extern int rightButton;
-extern int upButton;
-extern int downButton;
-extern int aButton;
-extern int bButton;
 
 void ReviseScreen(Point next_pos, int next_rot);
 bool GetSquares(Block block, Point pos, int rot, Point* squares);

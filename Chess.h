@@ -2,15 +2,9 @@
 #define CHESS_H
 
 #include <TFT_eSPI.h> // Assumes tft object is globally accessible
+#include "Buttons.h"
+extern TFT_eSPI tft;
 
-// External declarations for global variables
-extern TFT_eSPI tft; // Declare TFT object
-extern int leftButton; // Declare button variables
-extern int rightButton;
-extern int upButton;
-extern int downButton;
-extern int aButton;
-extern int bButton;
 
 // Define piece types
 enum PieceType {

@@ -1,6 +1,7 @@
 #ifndef PONG_H
 #define PONG_H
 
+
 // screen size
 const int SCREEN_WIDTH = 320; 
 const int SCREEN_HEIGHT = 170;
@@ -17,8 +18,7 @@ const int player1Up = 16; // same as bootmenu
 const int player1Down = 12; // same as bootmenu
 const int player2Up = 1;
 const int player2Down = 10;
-extern int aButton;
-extern int pauseButton;
+#include "Buttons.h"
 
 // Declare variables
 struct Paddle {

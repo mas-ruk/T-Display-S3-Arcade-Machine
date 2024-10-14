@@ -204,11 +204,11 @@ void showGameOver() {
   
   // Display the final score
   tft.setTextSize(2);
+  tft.drawCentreString("Final Score: " + String(snakeScore), screenWidth / 2, screenHeight / 2 - 20, 1);
   
   // Set smaller text size for instructions
   tft.setTextSize(1);
-  tft.drawCentreString("Final Score: " + String(snakeScore), screenWidth / 2, screenHeight / 2 - 20, 1);
-
+  
   // Draw "Press A to Restart" below "Game Over"
   tft.drawCentreString("Press A to Restart", screenWidth / 2, screenHeight / 2 + 10, 1);
   

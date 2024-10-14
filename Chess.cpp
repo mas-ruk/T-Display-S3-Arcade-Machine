@@ -173,11 +173,7 @@ void drawPiece(Piece piece, int posX, int posY, int squareSize, uint16_t pieceCo
       // Draw inner circle slightly smaller
       tft.fillCircle(centerX, centerY, radius - 1, pieceColor);
       // Draw the dot in the center
-      if (pieceColor == TFT_WHITE) {
-        tft.fillCircle(centerX, centerY, radius / 2, TFT_BLACK);
-      } else if (pieceColor == TFT_BLACK) {
-        tft.fillCircle(centerX, centerY, radius / 2, TFT_WHITE);
-      }
+      tft.fillCircle(centerX, centerY, radius / 2, bgColor);
       break;
 
     case KING:
