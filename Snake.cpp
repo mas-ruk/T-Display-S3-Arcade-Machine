@@ -10,8 +10,11 @@ const int screenHeight = 320;  // Height of the TFT display in portrait
 // Game grid dimensions
 const int gridSize = 10;  // Size of each grid square in pixels
 
+// Offset for score display
+const int yOffset = 20; // Pixels reserved at the top for the score
+
 const int gridWidth = screenWidth / gridSize;
-const int gridHeight = screenHeight / gridSize;
+const int gridHeight = (screenHeight - yOffset) / gridSize; // Adjusted for score offset
 
 // Snake variables
 int snakeX[100];  // Snake's x positions
@@ -29,6 +32,9 @@ int dirY;
 // Game state
 bool gameOver;
 
+// Score variable
+int snakeScore;
+
 // Function prototypes (private to this file)
 void readInputs();
 void moveSnake();
@@ -40,6 +46,10 @@ void placeFood();
 void snakeSetup() {
   // Initialize the game variables
   snakeLength = 3;
+  
+  // Initialize the score
+  snakeScore = 0;
+
   // Start the snake in the middle of the screen
   snakeX[0] = gridWidth / 2;
   snakeY[0] = gridHeight / 2;
@@ -149,6 +159,10 @@ void checkCollisions() {
     // Add new segment at the end
     snakeX[snakeLength - 1] = snakeX[snakeLength - 2];
     snakeY[snakeLength - 1] = snakeY[snakeLength - 2];
+    
+    // Increment score
+    snakeScore++;
+
     placeFood();
   }
 }
@@ -157,16 +171,21 @@ void drawGame() {
   // Clear screen
   tft.fillScreen(TFT_BLACK);
 
+  // Draw the score at the top center
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextSize(2);
+  tft.drawCentreString("Score: " + String(snakeScore), screenWidth / 2, 5, 1); // GFXFF is the font
+
   // Draw snake
   for (int i = 0; i < snakeLength; i++) {
     int x = snakeX[i] * gridSize;
-    int y = snakeY[i] * gridSize;
+    int y = snakeY[i] * gridSize + yOffset; // Apply yOffset for score space
     tft.fillRect(x, y, gridSize, gridSize, TFT_GREEN);
   }
 
   // Draw food
   int foodPosX = foodX * gridSize;
-  int foodPosY = foodY * gridSize;
+  int foodPosY = foodY * gridSize + yOffset; // Apply yOffset for score space
   tft.fillRect(foodPosX, foodPosY, gridSize, gridSize, TFT_RED);
 }
 
@@ -177,23 +196,24 @@ void showGameOver() {
   // Set text color to white
   tft.setTextColor(TFT_WHITE);
   
-  // Set text datum to Middle Center for centered alignment
-  tft.setTextDatum(MC_DATUM); // MC_DATUM = Middle Center
-  
-  // Set larger text size for "Game Over"
+  // Set text size for "Game Over"
   tft.setTextSize(2);
   
   // Draw "Game Over" at the center, slightly above the middle
-  tft.drawString("Game Over", screenWidth / 2, screenHeight / 2 - 30);
+  tft.drawCentreString("Game Over", screenWidth / 2, screenHeight / 2 - 50, 1);
+  
+  // Display the final score
+  tft.setTextSize(2);
+  tft.drawCentreString("Final Score: " + String(snakeScore), screenWidth / 2, screenHeight / 2 - 20, 1);
   
   // Set smaller text size for instructions
   tft.setTextSize(1);
   
   // Draw "Press A to Restart" below "Game Over"
-  tft.drawString("Press A to Restart", screenWidth / 2, screenHeight / 2 + 10);
+  tft.drawCentreString("Press A to Restart", screenWidth / 2, screenHeight / 2 + 10, 1);
   
   // Draw "Press B for Menu" further below
-  tft.drawString("Press B for Menu", screenWidth / 2, screenHeight / 2 + 40);
+  tft.drawCentreString("Press B for Menu", screenWidth / 2, screenHeight / 2 + 30, 1);
 }
 
 void placeFood() {
