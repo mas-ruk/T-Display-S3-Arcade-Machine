@@ -173,6 +173,8 @@ void setup() {
   Serial.begin(115200);
   delay(1000); // Wait for serial monitor to initialize
   Serial.println("Starting Game Controller...");
+  pinMode(15, OUTPUT);
+  digitalWrite(15, HIGH);
 
   setupPins();
   setupDebouncers();
