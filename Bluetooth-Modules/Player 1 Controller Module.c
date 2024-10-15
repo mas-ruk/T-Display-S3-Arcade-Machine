@@ -1,278 +1,197 @@
 #include <Arduino.h>
 #include <BLEDevice.h>
+#include <BLEServer.h>
 #include <BLEUtils.h>
-#include <BLEScan.h>
-#include <BLEAdvertisedDevice.h>
-#include <BLEClient.h>
 #include <BLE2902.h>
-#include <map>
-#include <vector>
-#include <string>
+#include <Bounce2.h>
 
-// Constants
-#define SCAN_TIME          10      // Seconds to scan for controllers
-#define MAX_CONTROLLERS    2       // Maximum number of controllers to connect
-#define CONNECT_TIMEOUT    10      // Connection timeout in seconds
-
-// UUIDs (must match the controller's SERVICE_UUID and CHARACTERISTIC_UUID)
+// Revised UUIDs (Ensure these are unique and match the master device)
 #define SERVICE_UUID        "00bf47c4-f07e-48d3-819f-4beafd84477c"
 #define CHARACTERISTIC_UUID "3239a287-250a-40b8-92a7-8af2b3239bb7"
 
-// Struct to hold controller information
-struct Controller {
-  int id;                                      // Unique ID assigned by the master
-  BLEAddress address;                          // BLE Address of the device
-  BLEClient* client;                           // BLE Client instance
-  BLERemoteService* service;                   // Remote Service
-  BLERemoteCharacteristic* characteristic;     // Remote Characteristic
-  bool buttons[11];                            // Latest button states
+// Debounce interval in milliseconds
+#define BOUNCE_INT 25
 
-  // Constructor
-  Controller(BLEAddress addr) 
-    : address(addr), client(nullptr), service(nullptr), characteristic(nullptr), id(0) {
-    memset(buttons, 0, sizeof(buttons));
-  }
+BLEServer *pServer = NULL;
+BLECharacteristic *pCharacteristic = NULL;
+bool deviceConnected = false;
 
-  // Destructor to clean up resources
-  ~Controller() {
-    if (client) {
-      client->disconnect();
-      delete client;
-    }
-    if (service) {
-      delete service;
-    }
-    if (characteristic) {
-      delete characteristic;
-    }
+// Callback class to handle connection events
+class MyServerCallbacks : public BLEServerCallbacks {
+  void onConnect(BLEServer* pServer) {
+    deviceConnected = true;
+    Serial.println("BLE Client Connected");
+  };
+  
+  void onDisconnect(BLEServer* pServer) {
+    deviceConnected = false;
+    Serial.println("BLE Client Disconnected");
+    // Restart advertising
+    pServer->getAdvertising()->start();
+    Serial.println("Restarted Advertising");
   }
 };
 
-// Global variables
-BLEScan* pBLEScan;
-std::map<std::string, Controller*> connectedControllers; // Map of MAC Address to Controller*
-int nextControllerID = 1;                                // Counter for assigning unique IDs
-bool isConnecting = false;                               // Flag to indicate if a connection attempt is in progress
-std::vector<BLEAddress> connectionQueue;                 // Queue of devices to connect to
+// Initialize BLE
+void setupBLE() {
+  Serial.println("Initializing BLE...");
+  BLEDevice::init("GameController_P1");
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
+  
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+  
+  pCharacteristic = pService->createCharacteristic(
+                      CHARACTERISTIC_UUID,
+                      BLECharacteristic::PROPERTY_NOTIFY
+                    );
 
-// Define button-to-GPIO pin assignments
-const int leftButton   = 13;
-const int rightButton  = 11;
-const int upButton     = 16;
-const int downButton   = 12;
+  pCharacteristic->addDescriptor(new BLE2902());
+  pService->start();
 
-const int xButton      = 1;
-const int yButton      = 3;
+  // Get the BLEAdvertising object
+  BLEAdvertising *pAdvertising = pServer->getAdvertising();
 
-const int aButton      = 2;
-const int bButton      = 10;
+  // Add the service UUID to the advertising packet
+  pAdvertising->addServiceUUID(SERVICE_UUID);
 
-const int mButton      = 44;
-const int pButton      = 43;
+  // Adjust the advertisement interval
+  pAdvertising->setMinInterval(400);  // Minimum interval (in 0.625ms units, 400 * 0.625ms = 250ms)
+  pAdvertising->setMaxInterval(500);  // Maximum interval (in 0.625ms units, 500 * 0.625ms = 312.5ms)
 
-const int pauseButton  = 21;
+  pAdvertising->start();
+  Serial.println("BLE Advertising Started with modified intervals");
+}
+
+// Define button pins (Revised to include the 11th button: PAUSE)
+const uint8_t BUTTON_PINS[11] = {13, 11, 16, 12, 1, 3, 2, 10, 44, 43, 21};
+
+// Array indices for readability
+enum Buttons {LEFT, RIGHT, UP, DOWN, X, Y, A, B, M, P, PAUSE};
 
 // Button names for display (Ensure this array has exactly 11 elements)
 const char* buttonNames[11] = {"LEFT", "RIGHT", "UP", "DOWN", "X", "Y", "A", "B", "M", "P", "PAUSE"};
 
-// Callback class to handle BLE client connection events
-class MyClientCallback : public BLEClientCallbacks {
-public:
-  Controller* controller;
-
-  MyClientCallback(Controller* ctrl) : controller(ctrl) {}
-
-  void onConnect(BLEClient* pclient) override {
-    // Optional: Add actions upon successful connection
+// Initialize button pins
+void setupPins() {
+  for (int i = 0; i < 11; i++) {
+    pinMode(BUTTON_PINS[i], INPUT_PULLUP); // Assuming buttons connect to GND when pressed
+    Serial.print("Button ");
+    Serial.print(i + 1); // Start counting from 1 for readability
+    Serial.print(" (");
+    Serial.print(buttonNames[i]);
+    Serial.print(") set to GPIO ");
+    Serial.println(BUTTON_PINS[i]);
   }
+}
 
-  void onDisconnect(BLEClient* pclient) override {
-    if (controller) {
-      std::string mac = controller->address.toString();
-      connectedControllers.erase(mac);
-      delete controller;
-      controller = nullptr;
-    }
-    isConnecting = false;
-    Serial.println("Controller disconnected.");
+// Initialize debouncers
+Bounce * buttonDebouncers = new Bounce[11];
+
+void setupDebouncers() {
+  for (int i = 0; i < 11; i++) {
+    buttonDebouncers[i].attach(BUTTON_PINS[i]);
+    buttonDebouncers[i].interval(BOUNCE_INT); // Debounce interval in milliseconds
+    Serial.print("Debouncer set for GPIO ");
+    Serial.println(BUTTON_PINS[i]);
   }
-};
+}
 
-// Callback class to handle advertised devices during scanning
-class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
-public:
-  void onResult(BLEAdvertisedDevice advertisedDevice) override {
-    // Check if the device advertises the desired service UUID
-    if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(BLEUUID(SERVICE_UUID))) {
-      std::string mac = advertisedDevice.getAddress().toString();
+// Current and previous button states
+bool currentButtonStates[11] = {0};
+bool previousButtonStates[11] = {0};
 
-      // Check if already connected and if maximum controllers reached
-      if (connectedControllers.find(mac) == connectedControllers.end() && connectedControllers.size() < MAX_CONTROLLERS) {
-        Serial.print("Desired controller found with MAC: ");
-        Serial.println(mac.c_str());
-
-        // Add to connection queue
-        connectionQueue.push_back(advertisedDevice.getAddress());
-        Serial.println("Controller added to connection queue.");
-      }
+// Function to check button states
+bool checkButtonStates() {
+  bool stateChanged = false;
+  for (int i = 0; i < 11; i++) {
+    buttonDebouncers[i].update();
+    currentButtonStates[i] = !buttonDebouncers[i].read(); // Invert if using INPUT_PULLUP
+    if (currentButtonStates[i] != previousButtonStates[i]) {
+      stateChanged = true;
     }
   }
-};
+  return stateChanged;
+}
 
-// Callback class to handle BLE client connection events (Final)
-class MyClientCallbacksFinal : public BLEClientCallbacks {
-public:
-  void onConnect(BLEClient* pclient) override {
-    Serial.println("Final Client Connected.");
+// Variables to hold packed button data
+uint8_t buttonData = 0;
+uint8_t buttonData2 = 0;
+
+// Function to pack button data
+void packButtonData() {
+  buttonData = 0;
+  for (int i = 0; i < 8; i++) { // First 8 buttons: LEFT, RIGHT, UP, DOWN, X, Y, A, B
+    buttonData |= (currentButtonStates[i] << i);
+  }
+}
+
+void packButtonData2() {
+  buttonData2 = 0;
+  for (int i = 8; i < 11; i++) { // Next 3 buttons: M, P, PAUSE
+    buttonData2 |= (currentButtonStates[i] << (i - 8));
+  }
+}
+
+// Function to send data over BLE
+void sendData() {
+  if (deviceConnected) {
+    uint8_t dataToSend[2] = {buttonData, buttonData2};
+    pCharacteristic->setValue(dataToSend, 2);
+    pCharacteristic->notify();
+    Serial.print("Data Sent: ");
+    Serial.print("0x");
+    Serial.print(buttonData, HEX);
+    Serial.print(" 0x");
+    Serial.println(buttonData2, HEX);
+  }
+}
+
+// Function to reliably send data with retries
+void reliableSendData() {
+  const int maxRetries = 3;
+  int retryCount = 0;
+  bool success = false;
+
+  while (retryCount < maxRetries && !success) {
+    if (deviceConnected) {
+      sendData();
+      success = true; // Assume success if device is connected
+    } else {
+      retryCount++;
+      Serial.println("Send failed, retrying...");
+      delay(100); // Wait before retrying
+    }
   }
 
-  void onDisconnect(BLEClient* pclient) override {
-    Serial.println("Final Client Disconnected.");
+  if (!success) {
+    Serial.println("Failed to send data after retries");
   }
-};
-
-// Function to initialize BLE
-void setupBLE() {
-  Serial.println("Initializing BLE...");
-  BLEDevice::init("");
-  Serial.println("BLE initialized.");
-
-  // Create BLE scan instance
-  pBLEScan = BLEDevice::getScan(); // Create new scan
-  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-  pBLEScan->setActiveScan(true);    // Active scan to get more data
-  pBLEScan->setInterval(500);       // Scan interval in milliseconds
-  pBLEScan->setWindow(499);         // Scan window in milliseconds (must be <= interval)
-  Serial.println("BLE Scan instance created and configured.");
-
-  // Start initial scanning
-  Serial.println("Starting scan for controllers...");
-  pBLEScan->start(SCAN_TIME, false);
-  Serial.println("Scan complete.");
 }
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Master ESP32 Starting...");
+  delay(1000); // Wait for serial monitor to initialize
+  Serial.println("Starting Game Controller...");
 
-  // Initialize BLE
+  setupPins();
+  setupDebouncers();
   setupBLE();
 }
 
 void loop() {
-  // Handle connection queue
-  if (!isConnecting && !connectionQueue.empty() && connectedControllers.size() < MAX_CONTROLLERS) {
-    BLEAddress address = connectionQueue.front();
-    connectionQueue.erase(connectionQueue.begin());
+  bool stateChanged = checkButtonStates();
 
-    std::string mac = address.toString();
-    if (connectedControllers.find(mac) != connectedControllers.end()) {
-      // Already connected
-      return;
-    }
+  if (stateChanged) {
+    packButtonData();
+    packButtonData2();
+    reliableSendData();
 
-    Serial.print("Attempting to connect to controller with MAC: ");
-    Serial.println(mac.c_str());
-
-    // Create a new Controller instance
-    Controller* newController = new Controller(address);
-    newController->id = nextControllerID++;
-
-    // Create BLE Client and set callbacks
-    newController->client = BLEDevice::createClient();
-    if (!newController->client) {
-      Serial.println("Failed to create BLE client.");
-      delete newController;
-      return;
-    }
-    newController->client->setClientCallbacks(new MyClientCallback(newController));
-
-    Serial.println("Attempting to connect to Controller...");
-    isConnecting = true;
-
-    // Attempt to connect with timeout
-    unsigned long startAttemptTime = millis();
-    bool connected = false;
-    while ((millis() - startAttemptTime) < (CONNECT_TIMEOUT * 1000)) { // CONNECT_TIMEOUT in seconds
-      connected = newController->client->connect(address);
-      if (connected) {
-        Serial.println("Connected to Controller.");
-        break;
-      } else {
-        Serial.println("Connection attempt failed. Retrying...");
-        delay(1000); // Wait 1 second before retrying
-      }
-    }
-
-    if (connected) {
-      // Obtain the service
-      newController->service = newController->client->getService(SERVICE_UUID);
-      if (newController->service != nullptr) {
-        // Obtain the characteristic
-        newController->characteristic = newController->service->getCharacteristic(CHARACTERISTIC_UUID);
-        if (newController->characteristic != nullptr) {
-          if (newController->characteristic->canNotify()) {
-            // Register for notifications
-            newController->characteristic->registerForNotify([newController](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify) {
-              if (length >= 2) { // Expecting at least 2 bytes
-                uint8_t buttonData = pData[0];
-                uint8_t buttonData2 = pData[1];
-
-                // Decode button states
-                for (int i = 0; i < 8; i++) {
-                  newController->buttons[i] = (buttonData & (1 << i)) != 0;
-                }
-                newController->buttons[8]  = (buttonData2 & 0x01) != 0; // M
-                newController->buttons[9]  = (buttonData2 & 0x02) != 0; // P
-                newController->buttons[10] = (buttonData2 & 0x04) != 0; // PAUSE
-
-                // Print button states
-                Serial.print("Controller ");
-                Serial.print(newController->id);
-                Serial.println(" Button States:");
-                for (int i = 0; i < 11; i++) {
-                  Serial.print("  ");
-                  Serial.print(buttonNames[i]);
-                  Serial.print(": ");
-                  Serial.println(newController->buttons[i] ? "Pressed" : "Released");
-                }
-                Serial.println();
-              } else {
-                Serial.println("Received insufficient data length for button states.");
-              }
-            });
-
-            Serial.print("Notifications subscribed for Controller ");
-            Serial.println(newController->id);
-
-            // Add to the connectedControllers map
-            connectedControllers[mac] = newController;
-          } else {
-            Serial.println("Characteristic cannot notify.");
-            newController->client->disconnect();
-            delete newController;
-          }
-        } else {
-          Serial.println("Failed to find characteristic.");
-          newController->client->disconnect();
-          delete newController;
-        }
-      } else {
-        Serial.println("Failed to find service.");
-        newController->client->disconnect();
-        delete newController;
-      }
-    } else {
-      Serial.println("Failed to connect to controller within timeout.");
-      delete newController;
+    // Update previous states
+    for (int i = 0; i < 11; i++) {
+      previousButtonStates[i] = currentButtonStates[i];
     }
   }
 
-  // Rescan for controllers if needed
-  if (connectedControllers.size() < MAX_CONTROLLERS) {
-    pBLEScan->start(SCAN_TIME, false);
-  }
-
-  // Delay between scans
-  delay(10000); // 10 seconds
+  delay(10); // Short delay to prevent excessive CPU usage
 }
