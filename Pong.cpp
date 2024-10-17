@@ -3,10 +3,6 @@
 #include <esp_system.h>
 #include "Pong.h"
 
-extern TFT_eSPI tft;
-extern bool paused;
-extern bool isPauseButtonPressed();
-
 // Global variables
 Paddle player1, player2;
 Ball ball;

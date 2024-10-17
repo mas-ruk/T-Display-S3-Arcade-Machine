@@ -2,6 +2,8 @@
 
 #include "Snake.h"
 #include <esp_system.h>
+#include <SD.h>
+#include <String.h>
 
 // Screen dimensions for portrait mode
 const int screenWidth = 170;   // Width of the TFT display in portrait
@@ -79,35 +81,27 @@ void snakeSetup() {
 void snakeLoop() {
   Serial.println("Snake Loop Running");
   while (!gameOver) {
-    // Check if 'B' button is pressed to exit
+    // Check for exit
     if (digitalRead(bButton) == LOW) {
-      esp_restart();  // Restart the microcontroller
+      gameOver = true;
+      break;
     }
 
-    // Read inputs
+    // Game logic
     readInputs();
     moveSnake();
     checkCollisions();
     drawGame();
 
-    // Delay to control game speed
-    delay(100);  // Adjust speed as necessary
+    delay(100); // Control speed
   }
 
   if (gameOver) {
-    showGameOver();
-    while (true) {
-      // Wait for 'A' button to restart or 'B' button to exit to menu
-      if (digitalRead(aButton) == LOW) {
-        snakeSetup();
-        return;
-      } else if (digitalRead(bButton) == LOW) {
-        esp_restart();  // Restart the microcontroller
-      }
-      delay(100);
-    }
+    snakeGameOver(snakeScore);
+    return; // Exit the loop to return to the menu
   }
 }
+
 
 void readInputs() {
   // Read the direction buttons
@@ -189,34 +183,92 @@ void drawGame() {
   tft.fillRect(foodPosX, foodPosY, gridSize, gridSize, TFT_RED);
 }
 
-void showGameOver() {
-  // Clear the screen with black color
-  tft.fillScreen(TFT_BLACK);
-  
-  // Set text color to white
-  tft.setTextColor(TFT_WHITE);
-  
-  // Set text size for "Game Over"
-  tft.setTextSize(2);
-  
-  // Draw "Game Over" at the center, slightly above the middle
-  tft.drawCentreString("Game Over", screenWidth / 2, screenHeight / 2 - 50, 1);
-  
-  // Display the final score
-  tft.setTextSize(2);
-  
-  // Set smaller text size for instructions
-  tft.setTextSize(1);
-  tft.drawCentreString("Final Score: " + String(snakeScore), screenWidth / 2, screenHeight / 2 - 20, 1);
-
-  // Draw "Press A to Restart" below "Game Over"
-  tft.drawCentreString("Press A to Restart", screenWidth / 2, screenHeight / 2 + 10, 1);
-  
-  // Draw "Press B for Menu" further below
-  tft.drawCentreString("Press B for Menu", screenWidth / 2, screenHeight / 2 + 30, 1);
-}
-
 void placeFood() {
   foodX = random(0, gridWidth);
   foodY = random(0, gridHeight);
 }
+
+// ============================================== GAME OVER AND LEADERBOARD FUNCTIONALITY ==============================================
+
+void snakeGameOver(int score) {
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_RED);
+  tft.setTextSize(2);
+  tft.drawString("Game Over!", 10, 10);
+  tft.setTextColor(TFT_WHITE);
+  tft.drawString("Score: " + String(score), 10, 40);
+  tft.drawString("Save score? (A:Yes B:No)", 10, 70);
+
+  while (true) {
+    if (digitalRead(aButton) == LOW) {
+      String initials = getInitials();
+      saveScore("snake_scores.txt", initials, score);
+      break;
+    } else if (digitalRead(bButton) == LOW) {
+      break;
+    }
+    delay(100);
+  }
+  drawMenu(); // Return to main menu
+}
+
+String getInitials() {
+  char initials[4] = {'A', 'A', 'A', '\0'};
+  int pos = 0;
+
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextSize(2);
+  tft.drawString("Enter Initials:", 10, 10);
+
+  while (true) {
+    // Display initials
+    tft.fillRect(10, 40, 100, 30, TFT_BLACK);
+    tft.drawString(String(initials), 10, 40);
+
+    // Read inputs
+    if (digitalRead(upButton) == LOW) {
+      initials[pos]++;
+      if (initials[pos] > 'Z') initials[pos] = '0';
+      if (initials[pos] > '9' && initials[pos] < 'A') initials[pos] = 'A';
+      delay(200); // Debounce
+    } else if (digitalRead(downButton) == LOW) {
+      initials[pos]--;
+      if (initials[pos] < '0') initials[pos] = 'Z';
+      if (initials[pos] < 'A' && initials[pos] > '9') initials[pos] = '9';
+      delay(200); // Debounce
+    } else if (digitalRead(rightButton) == LOW) {
+      pos = (pos + 1) % 3;
+      delay(200); // Debounce
+    } else if (digitalRead(leftButton) == LOW) {
+      pos = (pos - 1 + 3) % 3;
+      delay(200); // Debounce
+    } else if (digitalRead(aButton) == LOW) {
+      break; // Finish input
+    }
+    delay(50);
+  }
+
+  return String(initials);
+}
+
+void saveScore(const char* filename, String initials, int score) {
+  File file = SD.open(filename, FILE_APPEND);
+  if (file) {
+    file.println(initials + " " + String(score));
+    file.close();
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(TFT_GREEN);
+    tft.setTextSize(2);
+    tft.drawString("Score Saved!", 10, 150);
+    delay(1000);
+  } else {
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(TFT_RED);
+    tft.setTextSize(2);
+    tft.drawString("Save Failed!", 10, 150);
+    delay(1000);
+  }
+}
+
+

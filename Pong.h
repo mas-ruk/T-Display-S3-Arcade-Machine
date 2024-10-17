@@ -32,5 +32,8 @@ struct Ball {
 void pongSetup();
 void pongLoop();
 extern void launchPong();
+extern TFT_eSPI tft;
+extern bool paused;
+extern bool isPauseButtonPressed();
 
 #endif

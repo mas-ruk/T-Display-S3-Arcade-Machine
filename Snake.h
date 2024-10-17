@@ -4,6 +4,7 @@
 #define SNAKE_H
 
 #include <TFT_eSPI.h>
+#include <String.h>
 
 // Externally declare the TFT display object from bootmenu.ino
 extern TFT_eSPI tft;
@@ -19,5 +20,10 @@ extern int bButton;
 // Function prototypes
 void snakeSetup();
 void snakeLoop();
+void snakeGameOver(int score);
+String getInitials();
+void saveScore(const char* filename, String initials, int score);
+
+extern void drawMenu();
 
 #endif // SNAKE_H
