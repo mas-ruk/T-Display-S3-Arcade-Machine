@@ -20,6 +20,11 @@ int currUpState = upButton;
 int currDownState = downButton;
 int currAState = aButton;
 int currBState = bButton;
+
+// Variables for en passant
+int enPassantX = -1;
+int enPassantY = -1;
+
 void chessSetup() {
   // Initialize the board with starting positions
   // Set up pieces for both players
@@ -292,13 +297,6 @@ void switchPlayer() {
   swapInt = ((swapInt + 1) % 2);
 }
 
-void movePiece(int fromX, int fromY, int toX, int toY) {
-  // Move the piece
-  board[toY][toX] = board[fromY][fromX];
-  board[fromY][fromX].type = EMPTY;
-  board[fromY][fromX].color = NONE;
-}
-
 bool isLegalMove(int fromX, int fromY, int toX, int toY) {
   // Check if target square is within the board
   if (!isWithinBoard(toX, toY)) {
@@ -321,70 +319,207 @@ bool isLegalMove(int fromX, int fromY, int toX, int toY) {
   int dx = toX - fromX;
   int dy = toY - fromY;
 
+  // Check if it's this player's turn
+  if (piece.color != currentPlayer) {
+    return false;
+  }
+
+  // Check piece-specific movement rules
+  bool validMove = false;
+
   switch (piece.type) {
-    case PAWN:
-      {
-        // Pawns move forward (direction depends on color)
-        int direction = (piece.color == WHITE) ? -1 : 1;
+    case PAWN: {
+      int direction = (piece.color == WHITE) ? -1 : 1;
 
-        // Normal move
-        if (dx == 0 && dy == direction && target.type == EMPTY) {
-          return true;
-        }
-
-        // Capture move
-        if ((dx == -1 || dx == 1) && dy == direction && target.type != EMPTY && target.color != piece.color) {
-          return true;
-        }
-
-        // Double move from starting position
-        if ((fromY == 6 && piece.color == WHITE || fromY == 1 && piece.color == BLACK) &&
-            dx == 0 && dy == 2 * direction && target.type == EMPTY && board[fromY + direction][fromX].type == EMPTY) {
-          return true;
-        }
-
-        return false;
+      // Normal move
+      if (dx == 0 && dy == direction && target.type == EMPTY) {
+        validMove = true;
       }
 
+      // Double move from starting position
+      if (!piece.hasMoved && dx == 0 && dy == 2 * direction && target.type == EMPTY && board[fromY + direction][fromX].type == EMPTY) {
+        validMove = true;
+      }
+
+      // Capture move
+      if ((dx == -1 || dx == 1) && dy == direction && target.type != EMPTY && target.color != piece.color) {
+        validMove = true;
+      }
+
+      // En passant
+      if ((dx == -1 || dx == 1) && dy == direction && target.type == EMPTY) {
+        if (enPassantX == toX && enPassantY == toY) {
+          validMove = true;
+        }
+      }
+
+      break;
+    }
+    case KNIGHT:
+      if ((abs(dx) == 2 && abs(dy) == 1) || (abs(dx) == 1 && abs(dy) == 2)) {
+        validMove = true;
+      }
+      break;
+    case BISHOP:
+      if (abs(dx) == abs(dy) && isPathClear(fromX, fromY, toX, toY)) {
+        validMove = true;
+      }
+      break;
+    case ROOK:
+      if ((dx == 0 || dy == 0) && isPathClear(fromX, fromY, toX, toY)) {
+        validMove = true;
+      }
+      break;
+    case QUEEN:
+      if ((abs(dx) == abs(dy) || dx == 0 || dy == 0) && isPathClear(fromX, fromY, toX, toY)) {
+        validMove = true;
+      }
+      break;
+    case KING:
+      if (abs(dx) <= 1 && abs(dy) <= 1) {
+        validMove = true;
+      }
+      // Castling
+      if (!piece.hasMoved && dy == 0 && (dx == 2 || dx == -2)) {
+        int rookX = (dx == 2) ? 7 : 0;
+        Piece rook = board[fromY][rookX];
+        if (rook.type == ROOK && rook.color == piece.color && !rook.hasMoved) {
+          if (isPathClear(fromX, fromY, rookX, fromY)) {
+            // Ensure squares king passes through are not under attack
+            int step = dx / abs(dx);
+            for (int i = 1; i <= abs(dx); i++) {
+              int x = fromX + i * step;
+              // Temporarily move the king to each square to check for attacks
+              Piece originalFrom = board[fromY][fromX];
+              Piece originalTo = board[fromY][x];
+              board[fromY][x] = piece;
+              board[fromY][fromX].type = EMPTY;
+              board[fromY][fromX].color = NONE;
+              board[fromY][fromX].hasMoved = false;
+
+              bool inCheck = isInCheck(currentPlayer);
+
+              // Undo the move
+              board[fromY][fromX] = originalFrom;
+              board[fromY][x] = originalTo;
+
+              if (inCheck) {
+                return false;
+              }
+            }
+            validMove = true;
+          }
+        }
+      }
+      break;
+    default:
+      return false;
+  }
+
+  if (!validMove) {
+    return false;
+  }
+
+  // Simulate the move to check if it puts own king in check
+  Piece originalFrom = board[fromY][fromX];
+  Piece originalTo = board[toY][toX];
+
+  board[toY][toX] = board[fromY][fromX];
+  board[fromY][fromX].type = EMPTY;
+  board[fromY][fromX].color = NONE;
+  board[fromY][fromX].hasMoved = false;
+
+  bool inCheck = isInCheck(currentPlayer);
+
+  // Undo the move
+  board[fromY][fromX] = originalFrom;
+  board[toY][toX] = originalTo;
+
+  if (inCheck) {
+    return false;
+  }
+
+  return true;
+}
+
+bool isInCheck(PlayerColor color) {
+  // Find the king's position
+  int kingX = -1, kingY = -1;
+  for (int y = 0; y < 8; y++) {
+    for (int x = 0; x < 8; x++) {
+      if (board[y][x].type == KING && board[y][x].color == color) {
+        kingX = x;
+        kingY = y;
+        break;
+      }
+    }
+    if (kingX != -1) break;
+  }
+
+  if (kingX == -1 || kingY == -1) {
+    return true; // King not found; game should end
+  }
+
+  // Check if any enemy piece can attack the king
+  for (int y = 0; y < 8; y++) {
+    for (int x = 0; x < 8; x++) {
+      if (board[y][x].color != color && board[y][x].color != NONE) {
+        if (isAttacking(x, y, kingX, kingY)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+bool isAttacking(int fromX, int fromY, int toX, int toY) {
+  Piece piece = board[fromY][fromX];
+  int dx = toX - fromX;
+  int dy = toY - fromY;
+
+  switch (piece.type) {
+    case PAWN: {
+      int direction = (piece.color == WHITE) ? -1 : 1;
+      if ((dx == -1 || dx == 1) && dy == direction) {
+        return true;
+      }
+      break;
+    }
     case KNIGHT:
       if ((abs(dx) == 2 && abs(dy) == 1) || (abs(dx) == 1 && abs(dy) == 2)) {
         return true;
       }
-      return false;
-
+      break;
     case BISHOP:
       if (abs(dx) == abs(dy) && isPathClear(fromX, fromY, toX, toY)) {
         return true;
       }
-      return false;
-
+      break;
     case ROOK:
       if ((dx == 0 || dy == 0) && isPathClear(fromX, fromY, toX, toY)) {
         return true;
       }
-      return false;
-
+      break;
     case QUEEN:
       if ((abs(dx) == abs(dy) || dx == 0 || dy == 0) && isPathClear(fromX, fromY, toX, toY)) {
         return true;
       }
-      return false;
-
+      break;
     case KING:
       if (abs(dx) <= 1 && abs(dy) <= 1) {
         return true;
       }
-      // Castling is omitted for simplicity
-      return false;
-
+      break;
     default:
-      return false;
+      break;
   }
+  return false;
 }
 
 bool isPathClear(int fromX, int fromY, int toX, int toY) {
-  int dx = (toX - fromX);
-  int dy = (toY - fromY);
+  int dx = toX - fromX;
+  int dy = toY - fromY;
 
   int stepX = (dx == 0) ? 0 : (dx / abs(dx));
   int stepY = (dy == 0) ? 0 : (dy / abs(dy));
@@ -406,42 +541,129 @@ bool isWithinBoard(int x, int y) {
   return x >= 0 && x < 8 && y >= 0 && y < 8;
 }
 
-void checkGameOver() {
-  bool whiteKingPresent = false;
-  bool blackKingPresent = false;
+void movePiece(int fromX, int fromY, int toX, int toY) {
+  // Move the piece
+  board[toY][toX] = board[fromY][fromX];
+  board[toY][toX].hasMoved = true;
+  board[fromY][fromX].type = EMPTY;
+  board[fromY][fromX].color = NONE;
+  board[fromY][fromX].hasMoved = false;
 
-  for (int y = 0; y < 8; y++) {
-    for (int x = 0; x < 8; x++) {
-      if (board[y][x].type == KING) {
-        if (board[y][x].color == WHITE) {
-          whiteKingPresent = true;
-        } else if (board[y][x].color == BLACK) {
-          blackKingPresent = true;
-        }
-      }
+  // Check for en passant capture
+  if (board[toY][toX].type == PAWN) {
+    if (toX == enPassantX && toY == enPassantY) {
+      int capturedPawnY = (currentPlayer == WHITE) ? toY + 1 : toY - 1;
+      board[capturedPawnY][toX].type = EMPTY;
+      board[capturedPawnY][toX].color = NONE;
+      board[capturedPawnY][toX].hasMoved = false;
     }
   }
 
-  if (!whiteKingPresent || !blackKingPresent) {
+  // Reset en passant variables
+  enPassantX = -1;
+  enPassantY = -1;
+
+  // Check if pawn moved two squares forward (for en passant)
+  if (board[toY][toX].type == PAWN && abs(toY - fromY) == 2) {
+    enPassantX = toX;
+    enPassantY = (fromY + toY) / 2;
+  }
+
+  // Handle castling
+  if (board[toY][toX].type == KING && abs(toX - fromX) == 2) {
+    if (toX == 6) {
+      // Kingside castling
+      board[toY][5] = board[toY][7];
+      board[toY][5].hasMoved = true;
+      board[toY][7].type = EMPTY;
+      board[toY][7].color = NONE;
+      board[toY][7].hasMoved = false;
+    } else if (toX == 2) {
+      // Queenside castling
+      board[toY][3] = board[toY][0];
+      board[toY][3].hasMoved = true;
+      board[toY][0].type = EMPTY;
+      board[toY][0].color = NONE;
+      board[toY][0].hasMoved = false;
+    }
+  }
+
+  // Handle pawn promotion
+  if (board[toY][toX].type == PAWN && (toY == 0 || toY == 7)) {
+    // Promote pawn to queen
+    board[toY][toX].type = QUEEN;
+  }
+}
+
+void checkGameOver() {
+  if (isInCheckmate(currentPlayer)) {
     // Game over
     tft.fillScreen(TFT_BLACK);
     tft.setTextColor(TFT_WHITE);
     tft.setTextSize(3);
     tft.setTextDatum(MC_DATUM);
-    if (!whiteKingPresent) {
+    if (currentPlayer == WHITE) {
       tft.drawString("Black Wins!", tft.width() / 2, tft.height() / 2);
     } else {
       tft.drawString("White Wins!", tft.width() / 2, tft.height() / 2);
     }
-    // Wait for a while and then return to menu
     delay(5000);
-    // Optionally, reset the game
+    chessSetup();
+  } else if (isInStalemate(currentPlayer)) {
+    // Stalemate
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(TFT_WHITE);
+    tft.setTextSize(3);
+    tft.setTextDatum(MC_DATUM);
+    tft.drawString("Stalemate!", tft.width() / 2, tft.height() / 2);
+    delay(5000);
     chessSetup();
   }
 }
 
+bool isInCheckmate(PlayerColor color) {
+  if (!isInCheck(color)) {
+    return false;
+  }
+  // Check if the player has any legal moves
+  for (int fromY = 0; fromY < 8; fromY++) {
+    for (int fromX = 0; fromX < 8; fromX++) {
+      if (board[fromY][fromX].color == color) {
+        for (int toY = 0; toY < 8; toY++) {
+          for (int toX = 0; toX < 8; toX++) {
+            if (isLegalMove(fromX, fromY, toX, toY)) {
+              return false;
+            }
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
+
+bool isInStalemate(PlayerColor color) {
+  if (isInCheck(color)) {
+    return false;
+  }
+  // Check if the player has any legal moves
+  for (int fromY = 0; fromY < 8; fromY++) {
+    for (int fromX = 0; fromX < 8; fromX++) {
+      if (board[fromY][fromX].color == color) {
+        for (int toY = 0; toY < 8; toY++) {
+          for (int toX = 0; toX < 8; toX++) {
+            if (isLegalMove(fromX, fromY, toX, toY)) {
+              return false;
+            }
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
+
 void chessLoop() {
   handleInput();
-  // Delay to debounce buttons
-  delay(100);
+  // No need to delay here; handleInput should handle button debouncing
 }
