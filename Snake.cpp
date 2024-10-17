@@ -81,12 +81,6 @@ void snakeSetup() {
 void snakeLoop() {
   Serial.println("Snake Loop Running");
   while (!gameOver) {
-    // Check for exit
-    if (digitalRead(bButton) == LOW) {
-      gameOver = true;
-      break;
-    }
-
     // Game logic
     readInputs();
     moveSnake();
@@ -101,7 +95,6 @@ void snakeLoop() {
     return; // Exit the loop to return to the menu
   }
 }
-
 
 void readInputs() {
   // Read the direction buttons
@@ -193,7 +186,7 @@ void placeFood() {
 void snakeGameOver(int score) {
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_RED);
-  tft.setTextSize(2);
+  tft.setTextSize(1);
   tft.drawString("Game Over!", 10, 10);
   tft.setTextColor(TFT_WHITE);
   tft.drawString("Score: " + String(score), 10, 40);
@@ -205,11 +198,10 @@ void snakeGameOver(int score) {
       saveScore("snake_scores.txt", initials, score);
       break;
     } else if (digitalRead(bButton) == LOW) {
-      break;
+      esp_restart();
     }
     delay(100);
   }
-  drawMenu(); // Return to main menu
 }
 
 String getInitials() {

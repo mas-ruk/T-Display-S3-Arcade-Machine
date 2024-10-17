@@ -61,6 +61,7 @@ bool preAState = HIGH;
 void drawMenu() {
   // Set text size to 2 for the menu
   tft.setTextSize(2);
+  tft.setRotation(0);
   
   // Initialize screen as black
   tft.fillScreen(TFT_BLACK);
