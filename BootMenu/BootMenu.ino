@@ -180,7 +180,7 @@ void writeScoresToSD(const char* filename, ScoreEntry scores[]) {
 // Function to insert a new score into the top 5 scores list
 void insertNewScore(ScoreEntry scores[], int newScore) {
   // Prompt for player name or initials (simplified here)
-  String playerName = "Player"; // Modify this to get input from the user if possible
+  String playerName = getNameInput(); // Modify this to get input from the user if possible
 
   // Create a new score entry
   ScoreEntry newEntry;
@@ -247,6 +247,77 @@ void loop() {
 }
 
 // =============================================================================================================
+
+String getNameInput() {
+  String playerName = "";
+  const char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  int charIndex = 0;
+  int nameLength = 0;
+  int maxNameLength = 3; // Maximum number of characters in the name
+  bool selecting = true;
+
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextSize(1);
+
+  while (selecting) {
+    tft.fillScreen(TFT_BLACK);
+    tft.drawString("Enter Your Name", 10, 10);
+
+    // Display the current name
+    tft.drawString("Name: " + playerName, 10, 50);
+
+    // Display the current character
+    tft.drawString(String(characters[charIndex]), 60, 100);
+
+    tft.drawString("Use LEFT/RIGHT to change", 10, 150);
+    tft.drawString("Press A to select", 10, 170);
+    tft.drawString("Press B to finish", 10, 190);
+
+    // Wait for button input
+    while (true) {
+      updateControllerInput();
+
+      if (leftButton == 0) {
+        // Move to previous character
+        charIndex = (charIndex - 1 + sizeof(characters) - 1) % (sizeof(characters) - 1);
+        break;
+      }
+
+      if (rightButton == 0) {
+        // Move to next character
+        charIndex = (charIndex + 1) % (sizeof(characters) - 1);
+        break;
+      }
+
+      if (aButton == 0 && nameLength < maxNameLength) {
+        // Add the selected character to the name
+        playerName += characters[charIndex];
+        nameLength++;
+        break;
+      }
+
+      if (bButton == 0) {
+        // Finish name input
+        selecting = false;
+        break;
+      }
+
+      delay(100); // Small delay to debounce buttons
+    }
+
+    delay(200); // Delay to prevent multiple inputs from a single press
+  }
+
+  // If the player didn't enter any name, set a default
+  if (playerName.length() == 0) {
+    playerName = "AAA";
+  }
+
+  return playerName;
+}
+
+// ==================================================================
 
 // Function to display the scoreboard
 void showScoreboard() {

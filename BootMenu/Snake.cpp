@@ -4,6 +4,11 @@
 #include <esp_system.h>
 #include <Arduino.h>
 
+// Extern declarations for score arrays and functions
+extern ScoreEntry snakeScores[5];
+extern void insertNewScore(ScoreEntry scores[], int newScore);
+extern void writeScoresToSD(const char* filename, ScoreEntry scores[]);
+
 // Screen dimensions for portrait mode
 const int screenWidth = 170;   // Width of the TFT display in portrait
 const int screenHeight = 320;  // Height of the TFT display in portrait
@@ -43,11 +48,6 @@ void checkCollisions();
 void drawGame();
 void showGameOver();
 void placeFood();
-
-// Extern declarations for score arrays and functions
-extern ScoreEntry snakeScores[5];
-extern void insertNewScore(ScoreEntry scores[], int newScore);
-extern void writeScoresToSD(const char* filename, ScoreEntry scores[]);
 
 void snakeSetup() {
   // Initialize the game variables
