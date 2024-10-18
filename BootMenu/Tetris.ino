@@ -87,7 +87,7 @@ void tetrisSetup(void) {
 
 void tetrisLoop() {
   if (gameover) {
-    if(leftButton == 0) {
+    if(leftButton == 0|| rightButton == 0 || downButton == 0) {
       for (int j = 0; j < Height; ++j)
       for (int i = 0; i < Width; ++i)
         screen[i][j] = 0;
@@ -118,7 +118,7 @@ void tetrisLoop() {
 void GetNextPosRot(Point* pnext_pos, int* pnext_rot) {
   KeyPadLoop();
 
-  if (but_LEFT) started = true;
+  if (but_LEFT || but_RIGHT || but_DOWN ) started = true;
   if (!started) return;
 
   pnext_pos->X = pos.X;
