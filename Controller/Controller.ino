@@ -10,7 +10,7 @@ uint16_t currentButtonState = 0xFFFF; // All buttons not pressed (1)
 uint16_t lastButtonState = 0xFFFF;    // Previous state for comparison
 
 // Master device MAC address (replace with your master console's MAC address)
-uint8_t masterMACAddress[] = {0x30, 0x30, 0xF9, 0x59, 0x2A, 0xB4}; // Update XX with actual values
+uint8_t masterMACAddress[] = {0x30, 0x30, 0xF9, 0x59, 0x2A, 0xB4}; // Update HERE for a new master console (MAC_Finder the console first)
 
 // Peer information
 esp_now_peer_info_t peerInfo;
